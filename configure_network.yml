@@ -1,0 +1,239 @@
+---
+- name: Configure Network Devices
+  hosts: all
+  gather_facts: no
+  vars:
+    ansible_network_os: ios
+
+  tasks:
+    - name: Apply common configuration
+      ios_config:
+        lines:
+          - no ip domain-lookup
+          - line con 0
+          - logging sync
+          - exit
+          - line vty 0 4
+          - logging synch
+        save_when: modified
+      when: ansible_host is defined
+
+- name: Configure ISP Router
+  hosts: isp
+  gather_facts: no
+  vars:
+    ansible_network_os: ios
+
+  tasks:
+    - name: Configure interfaces
+      ios_config:
+        lines:
+          - interface s0/0/0
+          - ip address 83.1.2.1 255.255.255.252
+          - no shutdown
+          - exit
+          - interface g0/0
+          - ip address 83.1.1.1 255.255.255.252
+          - no shutdown
+          - exit
+          - interface g0/1
+          - ip address 193.10.160.223 255.255.254.0
+          - no shutdown
+          - exit
+        save_when: modified
+
+    - name: Configure static routes
+      ios_config:
+        lines:
+          - ip route 0.0.0.0 0.0.0.0 193.10.160.1
+          - ip route 192.168.100.0 255.255.255.0 83.1.1.2
+          - ip route 192.168.200.0 255.255.255.0 83.1.2.2
+        save_when: modified
+
+    - name: Configure PPP authentication
+      ios_config:
+        lines:
+          - interface s0/0/0
+          - ip address 83.1.2.1 255.255.255.252
+          - username GBG password cisco123
+          - encapsulation ppp
+          - ppp authentication chap
+          - clock rate 128000
+          - shutdown
+          - no shutdown
+        save_when: modified
+
+    - name: Configure BGP
+      ios_config:
+        lines:
+          - router bgp 65000
+          - network 1.2.0.0 mask 255.255.254.0
+          - neighbor 193.10.161.250 remote-as 65001
+          - ip route 1.2.0.0 255.255.254.0 null0
+        save_when: modified
+
+    - name: Configure IP SLA
+      ios_config:
+        lines:
+          - ip sla 1
+          - path jitter 8.8.8.8
+          - frequency 10
+          - exit
+          - ip sla schedule 1 start-time now life forever
+        save_when: modified
+
+    - name: Configure NAT
+      ios_config:
+        lines:
+          - ip access-list standard permit
+          - network 192.168.100.0 0.0.0.255
+          - network 192.168.200.0 0.0.0.255
+          - interface g0/1
+          - ip nat inside
+          - interface g0/0
+          - ip nat inside
+          - interface s0/0/0
+          - ip nat inside
+          - ip nat inside source list 1 interface g0/1 overload
+        save_when: modified
+
+    - name: Show NAT translations
+      ios_command:
+        commands: show ip nat translations
+      register: nat_output
+
+    - name: Display NAT translations
+      debug:
+        var: nat_output.stdout_lines
+
+- name: Configure JKPG Router
+  hosts: jkpg
+  gather_facts: no
+  vars:
+    ansible_network_os: ios
+
+  tasks:
+    - name: Configure interfaces
+      ios_config:
+        lines:
+          - interface g0/0
+          - ip address 83.1.1.2 255.255.255.252
+          - no shutdown
+          - exit
+          - interface g0/1
+          - ip address 192.168.100.11 255.255.255.0
+          - no shutdown
+          - exit
+        save_when: modified
+
+    - name: Configure static route
+      ios_config:
+        lines:
+          - ip route 0.0.0.0 0.0.0.0 83.1.1.1
+        save_when: modified
+
+    - name: Configure GRE tunnel
+      ios_config:
+        lines:
+          - interface tunnel 0
+          - ip address 10.1.1.1 255.255.255.252
+          - tunnel source 83.1.1.2
+          - tunnel destination 83.1.2.2
+          - exit
+          - ip route 192.168.200.0 255.255.255.0 10.1.1.1
+        save_when: modified
+
+    - name: Configure SNMP
+      ios_config:
+        lines:
+          - snmp-server community dnlab ro
+        save_when: modified
+
+    - name: Configure ACL
+      ios_config:
+        lines:
+          - ip access-list extended in-JKPG
+          - deny tcp host 192.168.100.10 host 193.10.200.54 eq 80
+          - permit ip any any
+          - exit
+          - interface g0/0
+          - ip access-group in-JKPG in
+        save_when: modified
+
+- name: Configure GBG Router
+  hosts: gbg
+  gather_facts: no
+  vars:
+    ansible_network_os: ios
+
+  tasks:
+    - name: Configure interfaces
+      ios_config:
+        lines:
+          - interface s0/0/0
+          - ip address 83.1.2.2 255.255.255.252
+          - no shutdown
+          - exit
+          - interface lo0
+          - ip address 192.168.200.1 255.255.255.0
+          - no shutdown
+          - exit
+        save_when: modified
+
+    - name: Configure static route
+      ios_config:
+        lines:
+          - ip route 0.0.0.0 0.0.0.0 83.1.2.1
+        save_when: modified
+
+    - name: Configure PPP
+      ios_config:
+        lines:
+          - interface s0/0/0
+          - ip address 83.1.2.2 255.255.255.252
+          - username ISP password cisco123
+          - encapsulation ppp
+          - ppp authentication chap
+        save_when: modified
+
+    - name: Configure GRE tunnel
+      ios_config:
+        lines:
+          - interface tunnel 0
+          - ip address 10.1.1.2 255.255.255.252
+          - tunnel source 83.1.2.2
+          - tunnel destination 83.1.1.2
+          - tunnel mode gre ip
+          - shutdown
+          - no shutdown
+          - exit
+          - ip route 192.168.100.0 255.255.255.0 10.1.1.2
+        save_when: modified
+
+    - name: Configure BGP
+      ios_config:
+        lines:
+          - router bgp 65001
+          - network 83.1.2.2 mask 255.255.255.252
+          - network 192.168.200.1 mask 255.255.255.252
+          - neighbor 83.1.2.1 remote-as 65000
+        save_when: modified
+
+    - name: Configure IP SLA
+      ios_config:
+        lines:
+          - ip sla 1
+          - path jitter 8.8.8.8
+          - ip sla schedule 1 start-time now life forever
+        save_when: modified
+
+    - name: Configure ACL on GBG
+      ios_config:
+        lines:
+          - ip access-list extended JPNG
+          - deny tcp host 192.168.100.10 host 193.10.200.54 eq 80
+          - permit ip any any
+          - exit
+          - interface g0/0
+          - ip access-group JPNG in
+        save_when: modified

@@ -1,0 +1,73 @@
+---
+# ISP Router Configuration
+# Host: 83.1.2.1
+
+# Basic Device Info
+hostname: ISP
+device_type: cisco_ios
+
+# Global Settings
+no_ip_domain_lookup: true
+line_con_0_logging_sync: true
+line_vty_0_4_logging_synch: true
+
+# Interface Configurations
+interface_s0_0_0:
+  description: "WAN Connection to GBG"
+  ip_address: "83.1.2.1"
+  subnet_mask: "255.255.255.252"
+  status: "no shutdown"
+  clock_rate: 128000
+  encapsulation: ppp
+  ppp_authentication: chap
+  username: "GBG"
+  password: "cisco123"
+
+interface_g0_0:
+  description: "Connection to JKPG"
+  ip_address: "83.1.1.1"
+  subnet_mask: "255.255.255.252"
+  status: "no shutdown"
+
+interface_g0_1:
+  description: "ISP Uplink"
+  ip_address: "193.10.160.223"
+  subnet_mask: "255.255.254.0"
+  status: "no shutdown"
+
+# Static Routes
+static_routes:
+  - "ip route 0.0.0.0 0.0.0.0 193.10.160.1"
+  - "ip route 192.168.100.0 255.255.255.0 83.1.1.2"
+  - "ip route 192.168.200.0 255.255.255.0 83.1.2.2"
+
+# BGP Configuration
+bgp_commands:
+  - "router bgp 65000"
+  - "network 1.2.0.0 mask 255.255.254.0"
+  - "neighbor 193.10.161.250 remote-as 65001"
+  - "ip route 1.2.0.0 255.255.254.0 null0"
+
+# IP SLA Configuration
+ip_sla_commands:
+  - "ip sla 1"
+  - "path jitter 8.8.8.8"
+  - "frequency 10"
+  - "exit"
+  - "ip sla schedule 1 start-time now life forever"
+
+# NAT Configuration
+nat_commands:
+  - "ip access-list standard permit"
+  - "network 192.168.100.0 0.0.0.255"
+  - "network 192.168.200.0 0.0.0.255"
+  - "interface g0/1"
+  - "ip nat inside"
+  - "interface g0/0"
+  - "ip nat inside"
+  - "interface s0/0/0"
+  - "ip nat inside"
+  - "ip nat inside source list 1 interface g0/1 overload"
+
+# SNMP Configuration
+snmp_community: "dnlab ro"

@@ -1,0 +1,5 @@
+---
+# Encrypted with ansible-vault
+vault_ansible_password: "cisco123"
+vault_enable_password: "cisco123"
+vault_snmp_community: "dnlab"

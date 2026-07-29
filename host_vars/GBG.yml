@@ -1,0 +1,72 @@
+---
+# GBG Router Configuration
+# Host: 83.1.2.2
+
+# Basic Device Info
+hostname: GBG
+device_type: cisco_ios
+
+# Global Settings
+no_ip_domain_lookup: true
+line_con_0_logging_sync: true
+line_vty_0_4_logging_synch: true
+
+# Interface Configurations
+interface_s0_0_0:
+  description: "WAN Connection to ISP"
+  ip_address: "83.1.2.2"
+  subnet_mask: "255.255.255.252"
+  status: "no shutdown"
+  encapsulation: ppp
+  ppp_authentication: chap
+  username: "ISP"
+  password: "cisco123"
+
+interface_lo0:
+  description: "Loopback Interface"
+  ip_address: "192.168.200.1"
+  subnet_mask: "255.255.255.0"
+  status: "no shutdown"
+
+# Static Routes
+static_routes:
+  - "ip route 0.0.0.0 0.0.0.0 83.1.2.1"
+
+# GRE Tunnel Configuration
+gre_tunnel_commands:
+  - "interface tunnel 0"
+  - "ip address 10.1.1.2 255.255.255.252"
+  - "tunnel source 83.1.2.2"
+  - "tunnel destination 83.1.1.2"
+  - "tunnel mode gre ip"
+  - "shutdown"
+  - "no shutdown"
+  - "exit"
+  - "ip route 192.168.100.0 255.255.255.0 10.1.1.2"
+
+# BGP Configuration
+bgp_commands:
+  - "router bgp 65001"
+  - "network 83.1.2.2 mask 255.255.255.252"
+  - "network 192.168.200.1 mask 255.255.255.252"
+  - "neighbor 83.1.2.1 remote-as 65000"
+
+# IP SLA Configuration
+ip_sla_commands:
+  - "ip sla 1"
+  - "path jitter 8.8.8.8"
+  - "exit"
+  - "ip sla schedule 1 start-time now life forever"
+
+# ACL Configuration
+acl_commands:
+  - "ip access-list extended JPNG"
+  - "deny tcp host 192.168.100.10 host 193.10.200.54 eq 80"
+  - "permit ip any any"
+  - "exit"
+
+# Interface ACL Application
+interface_acl:
+  interface: "g0/0"
+  access_list: "JPNG"
+  direction: "in"

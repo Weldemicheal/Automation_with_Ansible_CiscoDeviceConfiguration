@@ -1,0 +1,54 @@
+---
+# JKPG Router Configuration
+# Host: 83.1.1.2
+
+# Basic Device Info
+hostname: JKPG
+device_type: cisco_ios
+
+# Global Settings
+no_ip_domain_lookup: true
+line_con_0_logging_sync: true
+line_vty_0_4_logging_synch: true
+
+# Interface Configurations
+interface_g0_0:
+  description: "WAN Connection to ISP"
+  ip_address: "83.1.1.2"
+  subnet_mask: "255.255.255.252"
+  status: "no shutdown"
+
+interface_g0_1:
+  description: "LAN Connection"
+  ip_address: "192.168.100.11"
+  subnet_mask: "255.255.255.0"
+  status: "no shutdown"
+
+# Static Routes
+static_routes:
+  - "ip route 0.0.0.0 0.0.0.0 83.1.1.1"
+
+# GRE Tunnel Configuration
+gre_tunnel_commands:
+  - "interface tunnel 0"
+  - "ip address 10.1.1.1 255.255.255.252"
+  - "tunnel source 83.1.1.2"
+  - "tunnel destination 83.1.2.2"
+  - "exit"
+  - "ip route 192.168.200.0 255.255.255.0 10.1.1.1"
+
+# ACL Configuration
+acl_commands:
+  - "ip access-list extended in-JKPG"
+  - "deny tcp host 192.168.100.10 host 193.10.200.54 eq 80"
+  - "permit ip any any"
+  - "exit"
+
+# Interface ACL Application
+interface_acl:
+  interface: "g0/0"
+  access_list: "in-JKPG"
+  direction: "in"
+
+# SNMP Configuration
+snmp_community: "dnlab ro"

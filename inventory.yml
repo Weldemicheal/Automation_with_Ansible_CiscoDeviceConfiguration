@@ -1,0 +1,49 @@
+---
+all:
+  children:
+    routers:
+      hosts:
+        ISP:
+          ansible_host: 83.1.2.1
+          ansible_network_os: ios
+          ansible_user: admin
+          ansible_connection: network_cli
+          device_type: cisco_ios
+          site: main
+
+        JKPG:
+          ansible_host: 83.1.1.2
+          ansible_network_os: ios
+          ansible_user: admin
+          ansible_connection: network_cli
+          device_type: cisco_ios
+          site: branch1
+
+        GBG:
+          ansible_host: 83.1.2.2
+          ansible_network_os: ios
+          ansible_user: admin
+          ansible_connection: network_cli
+          device_type: cisco_ios
+          site: branch2
+
+    isp:
+      hosts:
+        ISP:
+
+    jkpg:
+      hosts:
+        JKPG:
+
+    gbg:
+      hosts:
+        GBG:
+
+  vars:
+    ansible_network_os: ios
+    ansible_connection: network_cli
+    ansible_user: admin
+    ansible_password: "{{ vault_ansible_password }}"
+    ansible_become: yes
+    ansible_become_method: enable
+    ansible_become_password: "{{ vault_enable_password }}"
