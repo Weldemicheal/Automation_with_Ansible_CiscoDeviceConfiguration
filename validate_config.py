@@ -5,6 +5,8 @@ Configuration validation script with HTML reporting
 
 import os
 import json
+import sys
+
 import yaml
 import socket
 from datetime import datetime
